@@ -1,0 +1,31 @@
+#!/usr/bin/env tcsh
+setenv LD_LIBRARY_PATH /usr/local/lib/gurobi800/linux64/lib/ # change this to correct path, if necessary; see http://www.gurobi.com/
+#define variables to relevant paths
+set PROJ=<network name; e.g. dblp>
+set P=resources_${PROJ}
+set S=<top directory> 
+set DIR=${S}$P
+set RIS=<bin dir of RLT java project>
+set RES=./${P}/OUTPUT/ris.sol
+set LP=./${P}/OUTPUT/ris.lp
+set EST=<bin dir of ELT java project>
+set OUT=${S}OUTPUT/${PROJ}/ #output destination for all programs involved in the algorithm;
+#set parametrs
+set k = <k>
+set B = <B> # the expected influence of the optimal solution over blue nodes; Can be estimated using a standard IM algorithm adapted to count blue nodes exclusively.
+set t = <t>
+set nsamples = <num samples>
+# step 1: run script to set parameters
+cd ${S}
+python3.6 prms.py $DIR "k=${k}" "num_samples=${nsamples}" "t=${t}" "B=${B}"
+# step 2: run java program to generate RR samples and output the corresponding Linear program; This step can be substituted by adapting a standard IM algorithm to output its RR sets;
+cd $RIS;
+java ris.R $DIR > ${OUT}r1;
+# step 3: run gurobi to solve the Linear program;
+cd ${S};
+gurobi_cl ResultFile=${RES} ${LP} > ${OUT}g1;
+# step 4: run python script performing randomized rounding over the solution of the LP;
+python3.6 lpr.py $DIR > ${OUT}p1;
+# step 5: run java program to evaluate the solution; This step can be substituted by adapting a the influence estimation procedure of any standard IM algorithm;
+cd $EST;
+java ris.E $DIR >  ${OUT}e1;
